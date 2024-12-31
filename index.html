@@ -1,1 +1,260 @@
-Hello world!
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Look, so based!</title>
+    <meta charset="UTF-8">
+    <meta name="description" content="World's first Quotecoin generation platform! Powered with BASE!">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+        integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdn.jsdelivr.net/npm/web3@4.16.0/dist/web3.min.js"></script>
+    <script>
+        async function mint() {
+            const web3 = new Web3(window.ethereum);
+
+            let ticker = document.getElementById("ticker");
+            let tickerErr = document.getElementById("ticker-err");
+            let liq = document.getElementById("liq");
+            let liqErr = document.getElementById("liq-err");
+            let buy = document.getElementById("buy");
+            let buyErr = document.getElementById("buy-err");
+            let msg = document.getElementById("msg");
+
+            ticker.style.borderColor = 'black';
+            liq.style.borderColor = 'black';
+            buy.style.borderColor = 'black';
+            msg.style.borderColor = 'black';
+            tickerErr.style.visibility = 'hidden';
+            liqErr.style.visibility = 'hidden';
+            buyErr.style.visibility = 'hidden';
+
+            if (ticker.value) {
+                if (ticker.value != ticker.value.toUpperCase()) {
+                    ticker.style.borderColor = 'darkred';
+                    tickerErr.style.visibility = 'visible';
+                    tickerErr.innerText = 'Ticker should be all capitalized!';
+                    return;
+                }
+                if (ticker.value.length <= 2 || ticker.value.length > 6) {
+                    ticker.style.borderColor = 'darkred';
+                    tickerErr.style.visibility = 'visible';
+                    tickerErr.innerText = 'Ticker should be more than 2 and less than 7 characters long!';
+                    return;
+                }
+                try {
+                    web3.utils.toWei(liq.value, 'ether')
+                } catch {
+                    liq.style.borderColor = 'darkred';
+                    liqErr.style.visibility = 'visible';
+                    liqErr.innerText = 'Invalid ETH amount!';
+                    return;
+                }
+                try {
+                    web3.utils.toWei(buy.value, 'ether')
+                } catch {
+                    buy.style.borderColor = 'darkred';
+                    buyErr.style.visibility = 'visible';
+                    buyErr.innerText = 'Invalid ETH amount!';
+                    return;
+                }
+            }
+
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: '0x2105' }],
+            })
+            await window.ethereum.request({ method: "eth_requestAccounts" });
+
+            const providersAccounts = await web3.eth.getAccounts();
+            const defaultAccount = providersAccounts[0];
+
+            const tokenMakerAddr = '0xa5DA9029f769c07433E5e217A53fBcEfBE9979e7';
+
+            const tokenMaker = new web3.eth.Contract([
+                {
+                    "type": "function",
+                    "name": "createToken",
+                    "inputs": [
+                        {
+                            "name": "_name",
+                            "type": "string",
+                            "internalType": "string"
+                        },
+                        {
+                            "name": "_symbol",
+                            "type": "string",
+                            "internalType": "string"
+                        },
+                        {
+                            "name": "_memo",
+                            "type": "string",
+                            "internalType": "string"
+                        },
+                        {
+                            "name": "_initialSupply",
+                            "type": "uint256",
+                            "internalType": "uint256"
+                        },
+                        {
+                            "name": "_wethInitialBuy",
+                            "type": "uint256",
+                            "internalType": "uint256"
+                        }
+                    ],
+                    "stateMutability": "payable"
+                }
+            ], tokenMakerAddr);
+
+            tokenMaker.methods.createToken(
+                ticker.value,
+                ticker.value,
+                msg.value,
+                web3.utils.toWei("1000000", 'ether'),
+                web3.utils.toWei(buy.value, 'ether'),
+            ).send({ from: defaultAccount, value: web3.utils.toWei(liq.value, "ether") }).on('receipt', function (receipt) {
+                alert(JSON.stringify(receipt.events))
+
+            });
+
+            /*await window.ethereum.request({
+                method: 'wallet_watchAsset',
+                params: {
+                    type: 'ERC20',
+                    options: {
+                        address: tokenAddress,
+                        symbol: ticker.value,
+                        decimals: 18,
+                    },
+                },
+            });*/
+        }
+    </script>
+    <style>
+        * {
+            font-family: Verdana, Geneva, sans-serif;
+        }
+
+        body {
+            background-color: white;
+            color: black;
+            overflow: hidden;
+        }
+
+        input,
+        textarea {
+            overflow: auto;
+            outline: none;
+            box-shadow: none;
+            resize: none;
+
+            font-weight: 400;
+            font-size: 1.5em;
+            width: 100%;
+            color: black;
+            border: 1px solid black;
+            margin: 10px;
+            padding: 5px;
+            font-family: inherit;
+        }
+
+        textarea {
+            font-size: 0.9em;
+            height: 8em;
+            font-family: inherit;
+        }
+
+        button {
+            background-color: white;
+            color: black;
+            outline: none;
+            border: 1px solid black;
+            font-size: 1.5em;
+            padding: 0.2em 0.5em;
+            box-sizing: border-box;
+        }
+
+        input:hover,
+        input:focus {
+            outline: none;
+        }
+
+        button:hover {
+            cursor: pointer;
+            box-shadow: 0 0 1px black;
+        }
+
+        .row {
+            margin-top: 20px;
+        }
+
+        input::after {
+            content: 'S';
+        }
+
+        .eth {
+            font-size: 0.7em;
+            font-style: italic;
+        }
+
+        em {
+            font-weight: bold;
+        }
+
+        .err {
+            color: darkred;
+            text-align: center;
+            font-size: 0.6em;
+            visibility: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="width: 100vw; height: 100vh;">
+        <img src="left.svg" style="display: block; height: 70vh;  position: absolute; bottom: 0; z-index: -1;" />
+        <img src="right.svg"
+            style="display: block; height: 70vh; position: absolute; bottom: 0; right: 0; z-index: -1;" />
+        <div style="max-width: 300px; margin: 0 auto; margin-top: 20vh; text-align: left; z-index: 100;">
+            <div class="row">
+                <label for="ticker">TICKER</label>
+                <input id="ticker" type="text" name="ticker" placeholder="BASED" />
+                <div id="ticker-err" class="err"></div>
+            </div>
+            <div class="row" style="position: relative;">
+                <label for="liq">LIQUIDITY <span class="eth">(ETH)</span></label>
+                <input id="liq" type="text" name="liq" placeholder="0.001" />
+                <div id="liq-err" class="err"></div>
+            </div>
+            <div class="row" style="position: relative;">
+                <label for="buy">BUY YOURSELF <span class="eth">(ETH)</span></label>
+                <input id="buy" type="text" name="buy" placeholder="0.0001" />
+                <div id="buy-err" class="err"></div>
+            </div>
+            <div class="row">
+                <label for="msg">MESSAGE</label>
+                <textarea id="msg" name="msg" placeholder="write a message here..."></textarea>
+            </div>
+            <div class="row" style="text-align: center;">
+                <button onclick="mint()"><i class="fa fa-paper-plane" aria-hidden="true"></i> MOON
+                </button>
+            </div>
+            <div class="row" style="text-align: center; margin-top: 40px;">
+                Powered by <img src="base.svg" style="height: 0.9em;">
+            </div>
+            <div class="row" style="text-align: center; font-size: 0.7em; font-style: italic;">
+                <em>Note:</em> Liquidity tokens are burnt instantly! LookSoBased will collect 0.1% of the total minted
+                tokens as a fee!
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
