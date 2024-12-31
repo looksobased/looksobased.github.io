@@ -65,6 +65,12 @@
                     buyErr.innerText = 'Invalid ETH amount!';
                     return;
                 }
+                if (web3.utils.toWei(buy.value, 'ether') >= web3.utils.toWei(liq.value, 'ether')) {
+                    buy.style.borderColor = 'darkred';
+                    buyErr.style.visibility = 'visible';
+                    buyErr.innerText = 'Buy amount should be less than the liquidity!';
+                    return;
+                }
             }
 
             await window.ethereum.request({
@@ -110,8 +116,42 @@
                         }
                     ],
                     "stateMutability": "payable"
-                }
+                }, {
+                    "inputs": [
+                        {
+                            "internalType": "address",
+                            "name": "tokenAddress",
+                            "type": "address",
+                            "indexed": true
+                        },
+                        {
+                            "internalType": "string",
+                            "name": "memo",
+                            "type": "string",
+                            "indexed": false
+                        }
+                    ],
+                    "type": "event",
+                    "name": "NewToken",
+                    "anonymous": false
+                },
             ], tokenMakerAddr);
+
+            let resp = await fetch('https://api.basescan.org/api?module=proxy&action=eth_gasPrice&apikey=4DHDY5TV89PZU3FQRKI5F7RWUSINFBKKFP', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                },
+            }).then(response => response.json());
+            let gasPrice = resp.result;
+
+            let gas = await tokenMaker.methods.createToken(
+                ticker.value,
+                ticker.value,
+                msg.value,
+                web3.utils.toWei("1000000", 'ether'),
+                web3.utils.toWei(buy.value, 'ether'),
+            ).estimateGas({ from: defaultAccount, value: web3.utils.toWei(liq.value, "ether") });
 
             tokenMaker.methods.createToken(
                 ticker.value,
@@ -119,22 +159,23 @@
                 msg.value,
                 web3.utils.toWei("1000000", 'ether'),
                 web3.utils.toWei(buy.value, 'ether'),
-            ).send({ from: defaultAccount, value: web3.utils.toWei(liq.value, "ether") }).on('receipt', function (receipt) {
-                alert(JSON.stringify(receipt.events))
-
-            });
-
-            /*await window.ethereum.request({
-                method: 'wallet_watchAsset',
-                params: {
-                    type: 'ERC20',
-                    options: {
-                        address: tokenAddress,
-                        symbol: ticker.value,
-                        decimals: 18,
+            ).send({ from: defaultAccount, value: web3.utils.toWei(liq.value, "ether"), gas: gas, gasPrice: gasPrice }).on('receipt', function (receipt) {
+                console.log(receipt);
+                let tokenAddress = web3.utils.toChecksumAddress(receipt.events.NewToken.topics[1].slice(26));
+                window.ethereum.request({
+                    method: 'wallet_watchAsset',
+                    params: {
+                        type: 'ERC20',
+                        options: {
+                            address: tokenAddress,
+                            symbol: ticker.value,
+                            decimals: 18,
+                        },
                     },
-                },
-            });*/
+                }).then(function () {
+                    console.log("Done!");
+                });
+            });
         }
     </script>
     <style>
